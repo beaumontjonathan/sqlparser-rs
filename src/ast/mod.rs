@@ -549,6 +549,10 @@ pub enum Statement {
         assignments: Vec<Assignment>,
         /// WHERE
         selection: Option<Expr>,
+        /// ORDER BY
+        order_by: Vec<OrderByExpr>,
+        /// `LIMIT { <N> | ALL }`
+        limit: Option<Expr>,
     },
     /// DELETE
     Delete {
@@ -873,6 +877,8 @@ impl fmt::Display for Statement {
                 table_name,
                 assignments,
                 selection,
+                order_by,
+                limit,
             } => {
                 write!(f, "UPDATE {}", table_name)?;
                 if !assignments.is_empty() {
@@ -880,6 +886,12 @@ impl fmt::Display for Statement {
                 }
                 if let Some(selection) = selection {
                     write!(f, " WHERE {}", selection)?;
+                }
+                if !order_by.is_empty() {
+                    write!(f, " ORDER BY {}", display_comma_separated(order_by))?;
+                }
+                if let Some(ref limit) = limit {
+                    write!(f, " LIMIT {}", limit)?;
                 }
                 Ok(())
             }

@@ -2810,15 +2810,31 @@ impl<'a> Parser<'a> {
         let table_name = self.parse_object_name()?;
         self.expect_keyword(Keyword::SET)?;
         let assignments = self.parse_comma_separated(Parser::parse_assignment)?;
+
         let selection = if self.parse_keyword(Keyword::WHERE) {
             Some(self.parse_expr()?)
         } else {
             None
         };
+
+        let order_by = if self.parse_keywords(&[Keyword::ORDER, Keyword::BY]) {
+            self.parse_comma_separated(Parser::parse_order_by_expr)?
+        } else {
+            vec![]
+        };
+
+        let limit = if self.parse_keyword(Keyword::LIMIT) {
+            self.parse_limit()?
+        } else {
+            None
+        };
+
         Ok(Statement::Update {
             table_name,
             assignments,
             selection,
+            order_by,
+            limit,
         })
     }
 
