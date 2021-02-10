@@ -556,6 +556,10 @@ pub enum Statement {
         table_name: ObjectName,
         /// WHERE
         selection: Option<Expr>,
+        /// ORDER BY
+        order_by: Vec<OrderByExpr>,
+        /// `LIMIT { <N> | ALL }`
+        limit: Option<Expr>,
     },
     /// CREATE VIEW
     CreateView {
@@ -882,10 +886,18 @@ impl fmt::Display for Statement {
             Statement::Delete {
                 table_name,
                 selection,
+                order_by,
+                limit,
             } => {
                 write!(f, "DELETE FROM {}", table_name)?;
                 if let Some(selection) = selection {
                     write!(f, " WHERE {}", selection)?;
+                }
+                if !order_by.is_empty() {
+                    write!(f, " ORDER BY {}", display_comma_separated(order_by))?;
+                }
+                if let Some(ref limit) = limit {
+                    write!(f, " LIMIT {}", limit)?;
                 }
                 Ok(())
             }
