@@ -182,6 +182,7 @@ define_keywords!(
     DISTRIBUTE,
     DOUBLE,
     DROP,
+    DUPLICATE,
     DYNAMIC,
     EACH,
     ELEMENT,

@@ -2755,6 +2755,7 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        let ignore = self.parse_keyword(Keyword::IGNORE);
         let action = self.expect_one_of_keywords(&[Keyword::INTO, Keyword::OVERWRITE])?;
         let overwrite = action == Keyword::OVERWRITE;
         let local = self.parse_keyword(Keyword::LOCAL);
@@ -2778,21 +2779,40 @@ impl<'a> Parser<'a> {
             // Hive lets you put table here regardless
             let table = self.parse_keyword(Keyword::TABLE);
             let table_name = self.parse_object_name()?;
-            let columns = self.parse_parenthesized_column_list(Optional)?;
 
-            let partitioned = if self.parse_keyword(Keyword::PARTITION) {
-                self.expect_token(&Token::LParen)?;
-                let r = Some(self.parse_comma_separated(Parser::parse_expr)?);
-                self.expect_token(&Token::RParen)?;
-                r
+            let (assignments,
+                columns,
+                partitioned,
+                after_columns,
+                source,
+            ) = if self.parse_keyword(Keyword::SET) {
+                let assignments = self.parse_comma_separated(Parser::parse_assignment)?;
+
+                (assignments, vec![], None, vec![], None)
             } else {
-                None
+                let columns = self.parse_parenthesized_column_list(Optional)?;
+
+                let partitioned = if self.parse_keyword(Keyword::PARTITION) {
+                    self.expect_token(&Token::LParen)?;
+                    let r = Some(self.parse_comma_separated(Parser::parse_expr)?);
+                    self.expect_token(&Token::RParen)?;
+                    r
+                } else {
+                    None
+                };
+
+                // Hive allows you to specify columns after partitions as well if you want.
+                let after_columns = self.parse_parenthesized_column_list(Optional)?;
+
+                let source = Some(Box::new(self.parse_query()?));
+
+                (vec![], columns, partitioned, after_columns, source)
             };
 
-            // Hive allows you to specify columns after partitions as well if you want.
-            let after_columns = self.parse_parenthesized_column_list(Optional)?;
+            let duplicate_key_assignments = if self.parse_keywords(&[Keyword::ON, Keyword::DUPLICATE, Keyword::KEY, Keyword::UPDATE]) {
+                self.parse_comma_separated(Parser::parse_assignment)?
+            } else { vec![] };
 
-            let source = Box::new(self.parse_query()?);
             Ok(Statement::Insert {
                 or,
                 table_name,
@@ -2802,6 +2822,9 @@ impl<'a> Parser<'a> {
                 after_columns,
                 source,
                 table,
+                ignore,
+                assignments,
+                duplicate_key_assignments,
             })
         }
     }

@@ -517,13 +517,18 @@ pub enum Statement {
         /// Overwrite (Hive)
         overwrite: bool,
         /// A SQL query that specifies what to insert
-        source: Box<Query>,
+        source: Option<Box<Query>>,
         /// partitioned insert (Hive)
         partitioned: Option<Vec<Expr>>,
         /// Columns defined after PARTITION
         after_columns: Vec<Ident>,
         /// whether the insert has the table keyword (Hive)
         table: bool,
+        // whether the insert has the ignore keyword (MySQL)
+        ignore: bool,
+        /// list of assignments for SET query (MySQL)
+        assignments: Vec<Assignment>,
+        duplicate_key_assignments: Vec<Assignment>,
     },
     // TODO: Support ROW FORMAT
     Directory {
@@ -822,16 +827,20 @@ impl fmt::Display for Statement {
                 after_columns,
                 source,
                 table,
+                ignore,
+                assignments,
+                duplicate_key_assignments,
             } => {
                 if let Some(action) = or {
                     write!(f, "INSERT OR {} INTO {} ", action, table_name)?;
                 } else {
                     write!(
                         f,
-                        "INSERT {act}{tbl} {table_name} ",
+                        "INSERT {ign}{act}{tbl} {table_name} ",
                         table_name = table_name,
                         act = if *overwrite { "OVERWRITE" } else { "INTO" },
-                        tbl = if *table { " TABLE" } else { "" }
+                        tbl = if *table { " TABLE" } else { "" },
+                        ign = if *ignore { " IGNORE"} else { "" }
                     )?;
                 }
                 if !columns.is_empty() {
@@ -845,7 +854,16 @@ impl fmt::Display for Statement {
                 if !after_columns.is_empty() {
                     write!(f, "({}) ", display_comma_separated(after_columns))?;
                 }
-                write!(f, "{}", source)
+                if let Some(inner) = source {
+                    write!(f, "{}", inner)?;
+                }
+                if !assignments.is_empty() {
+                    write!(f, " SET {}", display_comma_separated(assignments))?;
+                }
+                if !duplicate_key_assignments.is_empty() {
+                    write!(f, " ON DUPLICATE KEY UPDATE {}", display_comma_separated(assignments))?;
+                }
+                Ok(())
             }
 
             Statement::Copy {
