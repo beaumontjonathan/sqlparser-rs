@@ -54,6 +54,9 @@ pub enum Value {
         /// or as `__ TO SECOND(x)`.
         fractional_seconds_precision: Option<u64>,
     },
+    Binary {
+        value: String,
+    },
     /// `NULL` value
     Null,
 }
@@ -84,6 +87,11 @@ impl fmt::Display for Value {
                     leading_precision,
                     fractional_seconds_precision
                 )
+            }
+            Value::Binary {
+                value,
+            } => {
+                write!(f, "BINARY '{}'", escape_single_quote_string(value))
             }
             Value::Interval {
                 value,

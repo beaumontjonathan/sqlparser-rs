@@ -355,6 +355,7 @@ impl<'a> Parser<'a> {
                 Keyword::EXISTS => self.parse_exists_expr(),
                 Keyword::EXTRACT => self.parse_extract_expr(),
                 Keyword::SUBSTRING => self.parse_substring_expr(),
+                Keyword::BINARY => self.parse_literal_binary(),
                 Keyword::INTERVAL => self.parse_literal_interval(),
                 Keyword::LISTAGG => self.parse_listagg_expr(),
                 Keyword::NOT => Ok(Expr::UnaryOp {
@@ -712,6 +713,11 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_literal_binary(&mut self) -> Result<Expr, ParserError> {
+        let value = self.parse_literal_string()?;
+
+        Ok(Expr::Value(Value::Binary{ value }))
+    }
     /// Parse an INTERVAL literal.
     ///
     /// Some syntactically valid intervals:
