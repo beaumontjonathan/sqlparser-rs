@@ -580,6 +580,15 @@ impl<'a> Tokenizer<'a> {
         chars.next(); // consume the opening quote
         while let Some(&ch) = chars.peek() {
             match ch {
+                '\\' => {
+                    chars.next(); // consume
+                    s.push('\\');
+                    let escaped_quote = chars.peek().map(|c| *c == '\'').unwrap_or(false);
+                    if escaped_quote {
+                        s.push('\'');
+                        chars.next();
+                    }
+                }
                 '\'' => {
                     chars.next(); // consume
                     let escaped_quote = chars.peek().map(|c| *c == '\'').unwrap_or(false);
