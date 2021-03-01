@@ -75,9 +75,11 @@ fn parse_insert_values() {
                 for (index, column) in columns.iter().enumerate() {
                     assert_eq!(column, &Ident::new(expected_columns[index].clone()));
                 }
-                match &source.body {
-                    SetExpr::Values(Values(values)) => assert_eq!(values.as_slice(), expected_rows),
-                    _ => unreachable!(),
+                if let Some(source) = source {
+                    match &source.body {
+                        SetExpr::Values(Values(values)) => assert_eq!(values.as_slice(), expected_rows),
+                        _ => unreachable!(),
+                    }
                 }
             }
             _ => unreachable!(),
